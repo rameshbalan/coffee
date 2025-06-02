@@ -391,6 +391,37 @@
         "Built": "R 4.4.0; x86_64-pc-linux-gnu; 2024-08-20 04:05:40 UTC; unix"
       }
     },
+    "dplyr": {
+      "Source": "CRAN",
+      "Repository": "http://rspm/default/latest",
+      "description": {
+        "Type": "Package",
+        "Package": "dplyr",
+        "Title": "A Grammar of Data Manipulation",
+        "Version": "1.1.4",
+        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = c(\"aut\", \"cre\"),\n           comment = c(ORCID = \"0000-0003-4757-117X\")),\n    person(\"Romain\", \"François\", role = \"aut\",\n           comment = c(ORCID = \"0000-0002-2444-4226\")),\n    person(\"Lionel\", \"Henry\", role = \"aut\"),\n    person(\"Kirill\", \"Müller\", role = \"aut\",\n           comment = c(ORCID = \"0000-0002-1416-3412\")),\n    person(\"Davis\", \"Vaughan\", , \"davis@posit.co\", role = \"aut\",\n           comment = c(ORCID = \"0000-0003-4777-038X\")),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\"))\n  )",
+        "Description": "A fast, consistent tool for working with data frame like\n    objects, both in memory and out of memory.",
+        "License": "MIT + file LICENSE",
+        "URL": "https://dplyr.tidyverse.org, https://github.com/tidyverse/dplyr",
+        "BugReports": "https://github.com/tidyverse/dplyr/issues",
+        "Depends": "R (>= 3.5.0)",
+        "Imports": "cli (>= 3.4.0), generics, glue (>= 1.3.2), lifecycle (>=\n1.0.3), magrittr (>= 1.5), methods, pillar (>= 1.9.0), R6,\nrlang (>= 1.1.0), tibble (>= 3.2.0), tidyselect (>= 1.2.0),\nutils, vctrs (>= 0.6.4)",
+        "Suggests": "bench, broom, callr, covr, DBI, dbplyr (>= 2.2.1), ggplot2,\nknitr, Lahman, lobstr, microbenchmark, nycflights13, purrr,\nrmarkdown, RMySQL, RPostgreSQL, RSQLite, stringi (>= 1.7.6),\ntestthat (>= 3.1.5), tidyr (>= 1.3.0), withr",
+        "VignetteBuilder": "knitr",
+        "Config/Needs/website": "tidyverse, shiny, pkgdown, tidyverse/tidytemplate",
+        "Config/testthat/edition": "3",
+        "Encoding": "UTF-8",
+        "LazyData": "true",
+        "RoxygenNote": "7.2.3",
+        "NeedsCompilation": "yes",
+        "Packaged": "2023-11-16 21:48:56 UTC; hadleywickham",
+        "Author": "Hadley Wickham [aut, cre] (<https://orcid.org/0000-0003-4757-117X>),\n  Romain François [aut] (<https://orcid.org/0000-0002-2444-4226>),\n  Lionel Henry [aut],\n  Kirill Müller [aut] (<https://orcid.org/0000-0002-1416-3412>),\n  Davis Vaughan [aut] (<https://orcid.org/0000-0003-4777-038X>),\n  Posit Software, PBC [cph, fnd]",
+        "Maintainer": "Hadley Wickham <hadley@posit.co>",
+        "Repository": "RSPM",
+        "Date/Publication": "2023-11-17 16:50:02 UTC",
+        "Built": "R 4.4.0; x86_64-pc-linux-gnu; 2024-04-25 19:48:43 UTC; unix"
+      }
+    },
     "evaluate": {
       "Source": "CRAN",
       "Repository": "http://rspm/default/latest",
@@ -557,6 +588,34 @@
         "Repository": "RSPM",
         "Date/Publication": "2025-04-12 10:40:02 UTC",
         "Built": "R 4.4.0; x86_64-pc-linux-gnu; 2025-04-14 16:31:44 UTC; unix"
+      }
+    },
+    "generics": {
+      "Source": "CRAN",
+      "Repository": "http://rspm/default/latest",
+      "description": {
+        "Package": "generics",
+        "Title": "Common S3 Generics not Provided by Base R Methods Related to\nModel Fitting",
+        "Version": "0.1.4",
+        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = c(\"aut\", \"cre\"),\n           comment = c(ORCID = \"0000-0003-4757-117X\")),\n    person(\"Max\", \"Kuhn\", , \"max@posit.co\", role = \"aut\"),\n    person(\"Davis\", \"Vaughan\", , \"davis@posit.co\", role = \"aut\"),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\"),\n           comment = c(ROR = \"https://ror.org/03wc8by49\"))\n  )",
+        "Description": "In order to reduce potential package dependencies and\n    conflicts, generics provides a number of commonly used S3 generics.",
+        "License": "MIT + file LICENSE",
+        "URL": "https://generics.r-lib.org, https://github.com/r-lib/generics",
+        "BugReports": "https://github.com/r-lib/generics/issues",
+        "Depends": "R (>= 3.6)",
+        "Imports": "methods",
+        "Suggests": "covr, pkgload, testthat (>= 3.0.0), tibble, withr",
+        "Config/Needs/website": "tidyverse/tidytemplate",
+        "Config/testthat/edition": "3",
+        "Encoding": "UTF-8",
+        "RoxygenNote": "7.3.2",
+        "NeedsCompilation": "no",
+        "Packaged": "2025-05-09 18:17:41 UTC; hadleywickham",
+        "Author": "Hadley Wickham [aut, cre] (ORCID:\n    <https://orcid.org/0000-0003-4757-117X>),\n  Max Kuhn [aut],\n  Davis Vaughan [aut],\n  Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>)",
+        "Maintainer": "Hadley Wickham <hadley@posit.co>",
+        "Repository": "RSPM",
+        "Date/Publication": "2025-05-09 23:50:06 UTC",
+        "Built": "R 4.4.0; ; 2025-05-10 04:13:38 UTC; unix"
       }
     },
     "ggplot2": {
@@ -1414,6 +1473,30 @@
         "Built": "R 4.4.0; ; 2024-12-14 04:08:57 UTC; unix"
       }
     },
+    "shinythemes": {
+      "Source": "CRAN",
+      "Repository": "http://rspm/default/latest",
+      "description": {
+        "Package": "shinythemes",
+        "Title": "Themes for Shiny",
+        "Version": "1.2.0",
+        "Authors@R": "c(\n    person(\"Winston\", \"Chang\", role = c(\"aut\", \"cre\"), email = \"winston@rstudio.com\"),\n    person(family = \"RStudio\", role = \"cph\"),\n    person(\"Thomas\", \"Park\", role = c(\"ctb\", \"cph\"), comment = \"Bootswatch themes\"),\n    person(\"Lukasz\", \"Dziedzic\", role = c(\"ctb\", \"cph\"), comment = \"Lato font\"),\n    person(\"Nathan\", \"Willis\", role = c(\"ctb\", \"cph\"), comment = \"News Cycle font\"),\n    person(family = \"Google Corporation\", role = c(\"ctb\", \"cph\"), comment = \"Open Sans and Roboto fonts\"),\n    person(\"Matt\", \"McInerney\", role = c(\"ctb\", \"cph\"), comment = \"Raleway font\"),\n    person(family = \"Adobe Systems Incorporated\", role = c(\"ctb\", \"cph\"), comment = \"Source Sans Pro font\"),\n    person(family = \"Canonical Ltd\", role = c(\"ctb\", \"cph\"), comment = \"Ubuntu font\")\n    )",
+        "Description": "Themes for use with Shiny. Includes several Bootstrap themes\n    from <https://bootswatch.com/>, which are packaged for use with Shiny\n    applications.",
+        "Depends": "R (>= 3.0.0)",
+        "Imports": "shiny (>= 0.11)",
+        "URL": "https://rstudio.github.io/shinythemes/",
+        "License": "GPL-3 | file LICENSE",
+        "RoxygenNote": "7.1.1",
+        "NeedsCompilation": "no",
+        "Packaged": "2021-01-25 21:27:09 UTC; winston",
+        "Author": "Winston Chang [aut, cre],\n  RStudio [cph],\n  Thomas Park [ctb, cph] (Bootswatch themes),\n  Lukasz Dziedzic [ctb, cph] (Lato font),\n  Nathan Willis [ctb, cph] (News Cycle font),\n  Google Corporation [ctb, cph] (Open Sans and Roboto fonts),\n  Matt McInerney [ctb, cph] (Raleway font),\n  Adobe Systems Incorporated [ctb, cph] (Source Sans Pro font),\n  Canonical Ltd [ctb, cph] (Ubuntu font)",
+        "Maintainer": "Winston Chang <winston@rstudio.com>",
+        "Repository": "RSPM",
+        "Date/Publication": "2021-01-25 22:00:02 UTC",
+        "Encoding": "UTF-8",
+        "Built": "R 4.4.0; ; 2024-08-22 23:44:33 UTC; unix"
+      }
+    },
     "sourcetools": {
       "Source": "CRAN",
       "Repository": "http://rspm/default/latest",
@@ -1470,6 +1553,36 @@
         "Repository": "RSPM",
         "Date/Publication": "2023-03-20 06:30:02 UTC",
         "Built": "R 4.4.0; x86_64-pc-linux-gnu; 2024-04-25 19:48:26 UTC; unix"
+      }
+    },
+    "tidyselect": {
+      "Source": "CRAN",
+      "Repository": "http://rspm/default/latest",
+      "description": {
+        "Package": "tidyselect",
+        "Title": "Select from a Set of Strings",
+        "Version": "1.2.1",
+        "Authors@R": "c(\n    person(\"Lionel\", \"Henry\", , \"lionel@posit.co\", role = c(\"aut\", \"cre\")),\n    person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = \"aut\"),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\"))\n  )",
+        "Description": "A backend for the selecting functions of the 'tidyverse'.  It\n    makes it easy to implement select-like functions in your own packages\n    in a way that is consistent with other 'tidyverse' interfaces for\n    selection.",
+        "License": "MIT + file LICENSE",
+        "URL": "https://tidyselect.r-lib.org, https://github.com/r-lib/tidyselect",
+        "BugReports": "https://github.com/r-lib/tidyselect/issues",
+        "Depends": "R (>= 3.4)",
+        "Imports": "cli (>= 3.3.0), glue (>= 1.3.0), lifecycle (>= 1.0.3), rlang\n(>= 1.0.4), vctrs (>= 0.5.2), withr",
+        "Suggests": "covr, crayon, dplyr, knitr, magrittr, rmarkdown, stringr,\ntestthat (>= 3.1.1), tibble (>= 2.1.3)",
+        "VignetteBuilder": "knitr",
+        "ByteCompile": "true",
+        "Config/testthat/edition": "3",
+        "Config/Needs/website": "tidyverse/tidytemplate",
+        "Encoding": "UTF-8",
+        "RoxygenNote": "7.3.0.9000",
+        "NeedsCompilation": "yes",
+        "Packaged": "2024-03-11 11:46:04 UTC; lionel",
+        "Author": "Lionel Henry [aut, cre],\n  Hadley Wickham [aut],\n  Posit Software, PBC [cph, fnd]",
+        "Maintainer": "Lionel Henry <lionel@posit.co>",
+        "Repository": "RSPM",
+        "Date/Publication": "2024-03-11 14:10:02 UTC",
+        "Built": "R 4.4.0; ; 2024-08-22 23:08:40 UTC; unix"
       }
     },
     "tinytex": {
@@ -1692,11 +1805,17 @@
     }
   },
   "files": {
+    "app.R": {
+      "checksum": "e4ff9183b21d5a77767b8c4498112203"
+    },
     "Coffee-Corner-MU/app.R": {
-      "checksum": "ae3ff15692c70dfde0026acc3ae8c14a"
+      "checksum": "e3fdbb7310bd6cf06e1125d22dbc26e0"
     },
     "Coffee-Corner-MU/expenses.csv": {
-      "checksum": "45edf36f954c44bedba0f408f8d4111b"
+      "checksum": "8e6b98473c0b809bb856169697e34178"
+    },
+    "expenses.csv": {
+      "checksum": "e7ba7d09526521f53cdc4d791acdf8c4"
     }
   },
   "users": null
