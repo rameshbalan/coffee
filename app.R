@@ -2,13 +2,13 @@ library(shiny)
 library(DT)
 library(ggplot2)
 library(shinythemes)
-library(dplyr) # Explicitly use dplyr for filter for clarity and robustness
+library(dplyr)
+library(googlesheets4)
 
 # --- UI (User Interface) ---
 ui <- fluidPage(
-  theme = shinytheme("paper"), # Apply a shinytheme
+  theme = shinytheme("paper"),
   
-  # Custom CSS for spacing and centering
   tags$head(
     tags$style(HTML("
       body { padding-top: 20px; }
@@ -52,8 +52,8 @@ ui <- fluidPage(
                  wellPanel(
                    h3("Summary & Budget"),
                    fluidRow(
-                     column(6, tags$h4(textOutput("running_total"), style = "color: #5cb85c;")), # Green text for total
-                     column(6, tags$h4(textOutput("running_remaining"), style = "color: #d9534f;")) # Red text for remaining
+                     column(6, tags$h4(textOutput("running_total"), style = "color: #5cb85c;")),
+                     column(6, tags$h4(textOutput("running_remaining"), style = "color: #d9534f;"))
                    )
                  ),
                  wellPanel(
@@ -96,9 +96,8 @@ ui <- fluidPage(
                )
              )
     ),
-    # --- New Tab for Contributions ---
     tabPanel("Contributions",
-             icon = icon("hand-holding-usd"), # A hand-holding-usd icon for money collected
+             icon = icon("hand-holding-usd"),
              br(),
              sidebarLayout(
                sidebarPanel(
@@ -107,7 +106,7 @@ ui <- fluidPage(
                    dateInput("contribution_date", "Date:", value = Sys.Date(), width = '100%'),
                    textInput("contributor_name", "Contributor's Name:", "", placeholder = "e.g., Alice"),
                    numericInput("contribution_amount", "Amount Contributed (Rs):", value = 0, min = 0, step = 0.01),
-                   actionButton("add_contribution", "Add Contribution", class = "btn-primary btn-block") # Primary blue button
+                   actionButton("add_contribution", "Add Contribution", class = "btn-primary btn-block")
                  )
                ),
                mainPanel(
@@ -145,9 +144,8 @@ ui <- fluidPage(
                p("Thanks for bean-g amazing!", style = "text-align: center; font-style: italic; margin-top: 30px;")
              )
     ),
-    # --- New Tab for Suggestions ---
     tabPanel("Suggestions Box",
-             icon = icon("lightbulb"), # A lightbulb icon for ideas
+             icon = icon("lightbulb"),
              br(),
              sidebarLayout(
                sidebarPanel(
@@ -159,7 +157,7 @@ ui <- fluidPage(
                    textAreaInput("suggestion_text", "Your Suggestion:", "",
                                  placeholder = "e.g., 'Try out some Arabica beans from Ethiopia!' or 'A French Press would be great for larger batches.'",
                                  rows = 5),
-                   actionButton("add_suggestion", "Submit Suggestion", class = "btn-info btn-block") # Blue, block-level button
+                   actionButton("add_suggestion", "Submit Suggestion", class = "btn-info btn-block")
                  )
                ),
                mainPanel(
@@ -177,7 +175,31 @@ ui <- fluidPage(
 # --- Server Logic ---
 server <- function(input, output, session) {
   
-  # Reactive value to store all data. Initialize with all expected columns including for suggestions.
+  # --- Google Sheets Setup ---
+  # Replace with your actual Google Sheet ID
+  # This sheet should have a tab named "CoffeeData" (or whatever you choose)
+  # and be shared with your service account's email address.
+  google_sheet_id <- "12cp5H-E0bZA0mK_If139Hrvc6wILBuCOJqBewjeGLys" # <--- REPLACE THIS WITH YOUR SHEET ID
+  
+  # Authentication for Google Sheets
+  # For Posit Connect, we recommend setting a GOOGLE_SERVICE_ACCOUNT_KEY environment variable
+  # with the full JSON key content.
+  if (Sys.getenv("GOOGLE_SERVICE_ACCOUNT_KEY") != "") {
+    # Write the JSON key content to a temporary file
+    temp_key_file <- tempfile(fileext = ".json")
+    writeLines(Sys.getenv("GOOGLE_SERVICE_ACCOUNT_KEY"), temp_key_file)
+    gs4_auth(path = temp_key_file, cache = FALSE)
+    # The tempfile will be automatically cleaned up when the R session ends.
+  } else {
+    # Fallback for local development if not using a service account file
+    # This will typically open a browser for interactive authentication.
+    # On first run, it will ask for consent and create a .secrets folder.
+    gs4_auth(cache = ".secrets", email = TRUE)
+  }
+  # --- End Google Sheets Setup ---
+  
+  
+  # Reactive value to store all data. Initialize with all expected columns.
   expenses <- reactiveVal(data.frame(
     Date = as.Date(character()),
     Item = character(),
@@ -185,56 +207,100 @@ server <- function(input, output, session) {
     Amount = numeric(),
     Payer = character(),
     Type = character(), # "Running", "Shared", "Contribution", "Suggestion"
-    # Additional columns for suggestions, will be NA for other types
     SuggestionName = character(),
     SuggestionText = character(),
     stringsAsFactors = FALSE
   ))
   
-  # File path for storing expenses
-  expenses_file <- "expenses.csv"
+  # Define all expected columns for the consolidated dataframe
+  expected_cols <- c("Date", "Item", "Category", "Amount", "Payer", "Type",
+                     "SuggestionName", "SuggestionText")
   
-  # Load existing data from CSV when the app starts
+  # Load existing data from Google Sheet when the app starts
   observe({
-    if (file.exists(expenses_file)) {
-      loaded_expenses <- read.csv(expenses_file, stringsAsFactors = FALSE)
-      loaded_expenses$Date <- as.Date(loaded_expenses$Date)
+    # Use tryCatch for robust error handling in case sheet is not found or permissions are off
+    tryCatch({
+      # Read the sheet. col_types is a hint, but googlesheets4 is often good at guessing.
+      # Specify the sheet name, e.g., "CoffeeData"
+      loaded_data <- read_sheet(google_sheet_id, sheet = "CoffeeData")
       
-      # Define all expected columns for the consolidated dataframe
-      expected_cols <- c("Date", "Item", "Category", "Amount", "Payer", "Type",
-                         "SuggestionName", "SuggestionText")
+      # Ensure Date column is proper date format (googlesheets4 usually handles this)
+      loaded_data$Date <- as.Date(loaded_data$Date)
       
-      # Add missing columns with appropriate default NA values
-      for (col in setdiff(expected_cols, colnames(loaded_expenses))) {
-        if (col %in% c("Date")) {
-          loaded_expenses[[col]] <- as.Date(NA)
-        } else if (col %in% c("Amount")) {
-          loaded_expenses[[col]] <- NA_real_
+      # Ensure Amount is numeric (googlesheets4 is usually good, but explicit conversion is safer)
+      loaded_data$Amount <- as.numeric(loaded_data$Amount)
+      
+      # Add missing columns with appropriate default NA values if loaded_data doesn't match expected
+      for (col in setdiff(expected_cols, colnames(loaded_data))) {
+        if (col == "Date") {
+          loaded_data[[col]] <- as.Date(NA)
+        } else if (col == "Amount") {
+          loaded_data[[col]] <- NA_real_
         } else { # For character columns
-          loaded_expenses[[col]] <- NA_character_
+          loaded_data[[col]] <- NA_character_
         }
       }
       
       # For older files without 'Type', assume they were 'Running' costs initially
-      if ("Type" %in% colnames(loaded_expenses) && any(is.na(loaded_expenses$Type))) {
-        loaded_expenses$Type[is.na(loaded_expenses$Type)] <- "Running"
-      } else if (!("Type" %in% colnames(loaded_expenses))) {
-        loaded_expenses$Type <- "Running" # Fallback if Type column was completely missing
+      if ("Type" %in% colnames(loaded_data) && any(is.na(loaded_data$Type))) {
+        loaded_data$Type[is.na(loaded_data$Type)] <- "Running"
+      } else if (!("Type" %in% colnames(loaded_data))) {
+        loaded_data$Type <- "Running"
       }
       
-      # Ensure all rows have a non-NA Type
-      loaded_expenses$Type[is.na(loaded_expenses$Type)] <- "Running" # Default to 'Running' for any remaining NA Types
+      # Ensure all rows have a non-NA Type (important if old data had NAs or blank cells)
+      loaded_data$Type[is.na(loaded_data$Type)] <- "Running" # Default to 'Running' for any remaining NA Types
       
       # Reorder columns to match the desired order
-      loaded_expenses <- loaded_expenses[expected_cols]
+      loaded_data <- loaded_data[expected_cols]
       
-      expenses(loaded_expenses)
-    }
-  })
+      expenses(loaded_data)
+      showNotification("Data loaded from Google Sheet.", type = "message", duration = 2)
+      
+    }, error = function(e) {
+      warning("Could not load data from Google Sheet: ", e$message)
+      # If loading fails (e.g., first run, sheet empty, or permissions), initialize with empty df
+      expenses(data.frame(
+        Date = as.Date(character()),
+        Item = character(),
+        Category = character(),
+        Amount = numeric(),
+        Payer = character(),
+        Type = character(),
+        SuggestionName = character(),
+        SuggestionText = character(),
+        stringsAsFactors = FALSE
+      ))
+      showNotification(paste("Error loading data from Google Sheet:", e$message,
+                             "\nApp initialized with empty data. Please check Sheet ID and permissions."),
+                       type = "error", duration = NULL) # duration = NULL makes it stay until dismissed
+    })
+  }, once = TRUE) # Run this observer only once on app startup
   
-  # Function to save all data to CSV
+  # Function to save all data to Google Sheet
   save_expenses <- function(data) {
-    write.csv(data, expenses_file, row.names = FALSE)
+    # Ensure data has all expected columns before writing
+    # This block is crucial for sheet_write to maintain column consistency
+    for (col in setdiff(expected_cols, colnames(data))) {
+      if (col == "Date") {
+        data[[col]] <- as.Date(NA)
+      } else if (col == "Amount") {
+        data[[col]] <- NA_real_
+      } else { # For character columns
+        data[[col]] <- NA_character_
+      }
+    }
+    # Reorder columns to ensure consistent writing order
+    data <- data[expected_cols]
+    
+    tryCatch({
+      # Write to the specified sheet. sheet_write overwrites the entire tab.
+      sheet_write(data, ss = google_sheet_id, sheet = "CoffeeData")
+      # No notification here, as calls to save_expenses are followed by specific action notifications
+    }, error = function(e) {
+      warning("Could not save data to Google Sheet: ", e$message)
+      showNotification(paste("Error saving data to Google Sheet:", e$message), type = "error", duration = NULL)
+    })
   }
   
   # --- Running Costs ---
@@ -248,21 +314,20 @@ server <- function(input, output, session) {
       Amount = input$running_amount,
       Payer = input$running_payer,
       Type = "Running",
-      SuggestionName = NA_character_, # NA for non-suggestion types
-      SuggestionText = NA_character_, # NA for non-suggestion types
+      SuggestionName = NA_character_,
+      SuggestionText = NA_character_,
       stringsAsFactors = FALSE
     )
     current_expenses <- expenses()
     updated_expenses <- rbind(current_expenses, new_expense)
     expenses(updated_expenses)
-    save_expenses(updated_expenses)
+    save_expenses(updated_expenses) # Save to Google Sheet
     showNotification("Running cost added successfully!", type = "message", duration = 3)
     updateTextInput(session, "running_item", value = "")
     updateNumericInput(session, "running_amount", value = 0)
     updateTextInput(session, "running_payer", value = "")
   })
   
-  # Render the interactive running expenses table
   output$running_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(expenses()) > 0) {
       datatable(filter(expenses(), Type == "Running") %>% select(Date, Item, Category, Amount, Payer),
@@ -277,8 +342,6 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  # Calculate and display total running expenses
   output$running_total <- renderText({
     if ("Type" %in% colnames(expenses())) {
       total <- sum(filter(expenses(), Type == "Running")$Amount)
@@ -288,7 +351,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # Calculate and display remaining budget for running costs (UPDATED LOGIC)
   output$running_remaining <- renderText({
     if ("Type" %in% colnames(expenses())) {
       total_running_expenses <- sum(filter(expenses(), Type == "Running")$Amount)
@@ -301,7 +363,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # Plot running expenses by category (Pie Chart)
   output$running_category_plot <- renderPlot({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Running")) > 0) {
       running_data <- filter(expenses(), Type == "Running")
@@ -320,7 +381,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # Plot running expenses by payer (Bar Chart)
   output$running_payer_plot <- renderPlot({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Running")) > 0) {
       running_data <- filter(expenses(), Type == "Running")
@@ -360,7 +420,7 @@ server <- function(input, output, session) {
     current_expenses <- expenses()
     updated_expenses <- rbind(current_expenses, new_expense)
     expenses(updated_expenses)
-    save_expenses(updated_expenses)
+    save_expenses(updated_expenses) # Save to Google Sheet
     showNotification("Shared expense added successfully!", type = "message", duration = 3)
     updateTextInput(session, "shared_description", value = "")
     updateNumericInput(session, "shared_amount", value = 0)
@@ -368,7 +428,6 @@ server <- function(input, output, session) {
     updateTextInput(session, "shared_payer", value = "")
   })
   
-  # Render the interactive shared expenses table
   output$shared_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(expenses()) > 0) {
       datatable(filter(expenses(), Type == "Shared") %>% select(Date, Item, Amount, Payer),
@@ -381,8 +440,6 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  # Calculate and display amount each person owes for the LAST shared expense added
   output$shared_each <- renderText({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Shared")) > 0) {
       shared_data <- filter(expenses(), Type == "Shared")
@@ -394,7 +451,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # Plot shared expenses over time (Bar Chart)
   output$shared_plot <- renderPlot({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Shared")) > 0) {
       shared_data <- filter(expenses(), Type == "Shared")
@@ -416,14 +472,14 @@ server <- function(input, output, session) {
     }
   })
   
-  # --- Contributions Logic (NEW) ---
+  # --- Contributions Logic ---
   observeEvent(input$add_contribution, {
     req(input$contributor_name, input$contribution_amount)
     
     new_contribution <- data.frame(
       Date = input$contribution_date,
-      Item = "Recurring Contribution", # Fixed item description
-      Category = "Fund", # Fixed category for contributions
+      Item = "Recurring Contribution",
+      Category = "Fund",
       Amount = input$contribution_amount,
       Payer = input$contributor_name,
       Type = "Contribution",
@@ -434,19 +490,18 @@ server <- function(input, output, session) {
     current_expenses <- expenses()
     updated_expenses <- rbind(current_expenses, new_contribution)
     expenses(updated_expenses)
-    save_expenses(updated_expenses)
+    save_expenses(updated_expenses) # Save to Google Sheet
     showNotification("Contribution added successfully!", type = "message", duration = 3)
     updateTextInput(session, "contributor_name", value = "")
     updateNumericInput(session, "contribution_amount", value = 0)
   })
   
-  # Render the contributions table (NEW)
   output$contributions_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Contribution")) > 0) {
       datatable(filter(expenses(), Type == "Contribution") %>%
-                  select(Date, Payer, Amount), # Select relevant columns
+                  select(Date, Payer, Amount),
                 options = list(pageLength = 10, autoWidth = TRUE),
-                colnames = c("Date", "Contributor", "Amount (Rs)"), # Rename columns for display
+                colnames = c("Date", "Contributor", "Amount (Rs)"),
                 rownames = FALSE, selection = 'none')
     } else {
       datatable(data.frame(Date=as.Date(character()), Contributor=character(), `Amount (Rs)`=numeric()),
@@ -473,14 +528,13 @@ server <- function(input, output, session) {
     current_expenses <- expenses()
     updated_expenses <- rbind(current_expenses, new_suggestion)
     expenses(updated_expenses)
-    save_expenses(updated_expenses)
+    save_expenses(updated_expenses) # Save to Google Sheet
     showNotification("Suggestion submitted! Thank you!", type = "message", duration = 3)
     updateTextInput(session, "suggestion_name", value = "")
     updateTextAreaInput(session, "suggestion_text", value = "")
     updateSelectInput(session, "suggestion_category", selected = "Coffee Beans")
   })
   
-  # Render the suggestions table
   output$suggestions_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Suggestion")) > 0) {
       datatable(filter(expenses(), Type == "Suggestion") %>%
