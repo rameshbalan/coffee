@@ -5,7 +5,7 @@ library(ggplot2) # For plotting
 # --- UI (User Interface) ---
 ui <- fluidPage(
   titlePanel(h1("Coffee Fund Expense Tracker")),
-  
+
   sidebarLayout(
     sidebarPanel(
       h3("Add New Expense"),
@@ -14,13 +14,11 @@ ui <- fluidPage(
       selectInput("category", "Category:",
                   choices = c("Coffee Beans", "Milk/Dairy", "Sweeteners", "Disposables (Cups, Stirrers)", "Equipment", "Other")),
       numericInput("amount", "Amount (Rs):", value = 0, min = 0, step = 0.01),
+      # Changed from selectInput to textInput for Payer
       textInput("payer_name", "Bought By:", ""),
-      actionButton("add_expense", "Add Expense", class = "btn-primary"),
-      br(),
-      br(),
-      actionButton("clear_data", "Clear All Data", class = "btn-danger") # Button to clear all data
+      actionButton("add_expense", "Add Expense", class = "btn-primary")
     ),
-    
+
     mainPanel(
       h3("Expense List"),
       DTOutput("expense_table"),
@@ -41,7 +39,7 @@ ui <- fluidPage(
 
 # --- Server Logic ---
 server <- function(input, output, session) {
-  
+
   # Reactive value to store expenses. This is where your data lives.
   expenses <- reactiveVal(data.frame(
     Date = as.Date(character()),
@@ -51,10 +49,10 @@ server <- function(input, output, session) {
     Payer = character(),
     stringsAsFactors = FALSE
   ))
-  
+
   # File path for storing expenses
   expenses_file <- "expenses.csv"
-  
+
   # Load existing expenses from CSV when the app starts
   observe({
     if (file.exists(expenses_file)) {
@@ -63,71 +61,38 @@ server <- function(input, output, session) {
       expenses(loaded_expenses)
     }
   })
-  
+
   # Function to save expenses to CSV
   save_expenses <- function(data) {
     write.csv(data, expenses_file, row.names = FALSE)
   }
-  
+
   # Add new expense when 'Add Expense' button is clicked
   observeEvent(input$add_expense, {
     # Ensure essential fields are filled before adding
-    req(input$item_description, input$amount, input$payer_name)
-    
+    req(input$item_description, input$amount, input$payer_name) # payer_name is now text, so ensure it's not empty
+
     new_expense <- data.frame(
       Date = input$expense_date,
       Item = input$item_description,
       Category = input$category,
       Amount = input$amount,
-      Payer = input$payer_name,
+      Payer = input$payer_name, # Directly use text input for Payer
       stringsAsFactors = FALSE
     )
     current_expenses <- expenses()
     updated_expenses <- rbind(current_expenses, new_expense)
     expenses(updated_expenses)
-    
+
     # Save to CSV immediately
     save_expenses(updated_expenses)
-    
+
     # Clear input fields after adding
     updateTextInput(session, "item_description", value = "")
     updateNumericInput(session, "amount", value = 0)
-    # Reset payer to first option or a default if preferred
-    updateSelectInput(session, "payer_name", selected = head(input$payer_name, 1))
+    updateTextInput(session, "payer_name", value = "") # Clear payer text input
   })
-  
-  # Clear all data when 'Clear All Data' button is clicked
-  observeEvent(input$clear_data, {
-    # Show a confirmation dialog
-    showModal(modalDialog(
-      title = "Confirm Data Deletion",
-      "Are you sure you want to delete ALL expense data? This action cannot be undone.",
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton("confirm_clear", "Delete All Data", class = "btn-danger")
-      )
-    ))
-  })
-  
-  # Handle confirmation of data clearing
-  observeEvent(input$confirm_clear, {
-    removeModal() # Close the confirmation dialog
-    expenses(data.frame( # Reset the reactive value to an empty dataframe
-      Date = as.Date(character()),
-      Item = character(),
-      Category = character(),
-      Amount = numeric(),
-      Payer = character(),
-      stringsAsFactors = FALSE
-    ))
-    # Delete the CSV file
-    if (file.exists(expenses_file)) {
-      file.remove(expenses_file)
-    }
-    showNotification("All expense data cleared!", type = "warning", duration = 3)
-  })
-  
-  
+
   # Render the interactive expense table
   output$expense_table <- renderDT({
     datatable(expenses(),
@@ -136,15 +101,15 @@ server <- function(input, output, session) {
                              columnDefs = list(list(width = '10%', targets = c(0, 3)))), # Adjust column widths if needed
               rownames = FALSE, # Hide row numbers
               selection = 'none' # No row selection
-    )
+              )
   })
-  
+
   # Calculate and display total expenses
   output$total_expenses <- renderText({
     total <- sum(expenses()$Amount)
     paste("Total Expenses:", format(total, big.mark = ",", scientific = FALSE), "Rs")
   })
-  
+
   # Calculate and display remaining budget
   output$remaining_budget <- renderText({
     collected_amount <- 600 # Your fixed collected amount
@@ -152,7 +117,7 @@ server <- function(input, output, session) {
     remaining <- collected_amount - total_spent
     paste("Remaining Budget:", format(remaining, big.mark = ",", scientific = FALSE), "Rs")
   })
-  
+
   # Plot expenses by category (Pie Chart)
   output$category_plot <- renderPlot({
     if (nrow(expenses()) > 0) {
@@ -170,7 +135,7 @@ server <- function(input, output, session) {
         theme_void()
     }
   })
-  
+
   # Plot expenses by payer (Bar Chart)
   output$payer_plot <- renderPlot({
     if (nrow(expenses()) > 0) {
