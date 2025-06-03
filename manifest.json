@@ -2193,7 +2193,7 @@
   },
   "files": {
     "app.R": {
-      "checksum": "5d4208ad30557e0768af023dcb2fee45"
+      "checksum": "e972fbde81451a30a7d86c14b74dee6a"
     },
     "Coffee-Corner-MU/app.R": {
       "checksum": "e3fdbb7310bd6cf06e1125d22dbc26e0"
@@ -2203,6 +2203,9 @@
     },
     "expenses.csv": {
       "checksum": "e7ba7d09526521f53cdc4d791acdf8c4"
+    },
+    "infra-ratio-461719-b6-6f61f9a007c4.json": {
+      "checksum": "579e68cc50e35a77516bf00016066970"
     }
   },
   "users": null
