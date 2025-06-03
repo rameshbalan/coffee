@@ -1,29 +1,33 @@
 library(shiny)
-library(DT)
-library(ggplot2)
-library(shinythemes)
-library(dplyr)
-library(googlesheets4)
+library(DT) # For interactive tables
+library(ggplot2) # For plotting
+library(shinythemes) # For a nice theme
+library(dplyr) # For data manipulation (e.g., filter, select)
+library(googlesheets4) # For reading/writing Google Sheets
+library(googledrive) # For Google Drive authentication
 
 # --- UI (User Interface) ---
 ui <- fluidPage(
-  theme = shinytheme("paper"),
+  theme = shinytheme("paper"), # Apply a pleasant theme
   
+  # Custom CSS for styling
   tags$head(
     tags$style(HTML("
-      body { padding-top: 20px; }
+      body { padding-top: 20px; font-family: 'Arial', sans-serif; }
       .container-fluid { max-width: 1200px; margin: auto; }
-      .well { background-color: #f8f8f8; border: 1px solid #e7e7e7; border-radius: 4px; padding: 20px; }
-      h1, h2, h3, h4 { text-align: center; color: #337ab7; margin-bottom: 25px; }
+      .well { background-color: #f8f8f8; border: 1px solid #e7e7e7; border-radius: 4px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+      h1, h2, h3, h4 { text-align: center; color: #337ab7; margin-bottom: 25px; font-weight: bold; }
       .tab-content { padding-top: 20px; }
       .dataTables_wrapper .dt-buttons { margin-bottom: 10px; }
-      .shiny-notification { position:fixed; top: calc(50%); left: calc(50%); transform: translate(-50%, -50%); }
+      .shiny-notification { position:fixed; top: calc(50%); left: calc(50%); transform: translate(-50%, -50%); z-index: 1000; }
       .founder-list { list-style-type: none; padding: 0; text-align: center; }
       .founder-list li { margin-bottom: 5px; font-size: 1.1em; color: #555; }
+      .btn-block { margin-top: 15px; } /* Space above buttons */
+      .shiny-input-container { margin-bottom: 15px; } /* Space between inputs */
     "))
   ),
   
-  titlePanel("☕ BrewBudget"),
+  titlePanel(h1("☕ Mug Life: Coffee Corner Ops")),
   
   tabsetPanel(
     id = "main_tabs",
@@ -35,12 +39,16 @@ ui <- fluidPage(
                  wellPanel(
                    h3("Add Running Cost"),
                    dateInput("running_date", "Date:", value = Sys.Date(), width = '100%'),
-                   textInput("running_item", "Item/Description:", "", placeholder = "e.g., Coffee Beans, Milk"),
+                   textInput("running_item", "Item/Description:", "", placeholder = "e.g., Coffee Beans, Milk (500ml)"),
                    selectInput("running_category", "Category:",
                                choices = c("Coffee Beans", "Milk/Dairy", "Sweeteners", "Disposables (Cups, Stirrers)", "Equipment", "Other")),
-                   numericInput("running_amount", "Amount (Rs):", value = 0, min = 0, step = 0.01),
-                   textInput("running_payer", "Bought By:", "", placeholder = "e.g., John Doe"),
-                   actionButton("add_running", "Add Running Cost", class = "btn-success btn-block")
+                   numericInput("running_amount", "Amount (Rs):", value = 0, min = 0, step = 0.01, width = '100%'),
+                   textInput("running_payer", "Bought By:", "", placeholder = "e.g., John Doe, Yourself"),
+                   actionButton("add_running", "Add Running Cost", class = "btn-primary btn-block")
+                 ),
+                 wellPanel(
+                   h4("Admin Actions"),
+                   actionButton("clear_running_data", "Clear All Running Costs", class = "btn-danger btn-block")
                  )
                ),
                mainPanel(
@@ -73,11 +81,15 @@ ui <- fluidPage(
                  wellPanel(
                    h3("Add Shared Expense"),
                    dateInput("shared_date", "Date:", value = Sys.Date(), width = '100%'),
-                   textInput("shared_description", "Description:", "", placeholder = "e.g., New Kettle, Party Supplies"),
-                   numericInput("shared_amount", "Total Amount (Rs):", value = 0, min = 0, step = 0.01),
-                   numericInput("shared_people", "Number of People Sharing:", value = 2, min = 2, step = 1),
-                   textInput("shared_payer", "Paid By:", "", placeholder = "e.g., Jane Smith"),
-                   actionButton("add_shared", "Add Shared Expense", class = "btn-success btn-block")
+                   textInput("shared_description", "Description:", "", placeholder = "e.g., New Kettle, Party Supplies for Coffee"),
+                   numericInput("shared_amount", "Total Amount (Rs):", value = 0, min = 0, step = 0.01, width = '100%'),
+                   numericInput("shared_people", "Number of People Sharing:", value = 2, min = 2, step = 1, width = '100%'),
+                   textInput("shared_payer", "Paid By:", "", placeholder = "e.g., Jane Smith, You"),
+                   actionButton("add_shared", "Add Shared Expense", class = "btn-primary btn-block")
+                 ),
+                 wellPanel(
+                   h4("Admin Actions"),
+                   actionButton("clear_shared_data", "Clear All Shared Expenses", class = "btn-danger btn-block")
                  )
                ),
                mainPanel(
@@ -104,9 +116,13 @@ ui <- fluidPage(
                  wellPanel(
                    h3("Record New Contribution"),
                    dateInput("contribution_date", "Date:", value = Sys.Date(), width = '100%'),
-                   textInput("contributor_name", "Contributor's Name:", "", placeholder = "e.g., Alice"),
-                   numericInput("contribution_amount", "Amount Contributed (Rs):", value = 0, min = 0, step = 0.01),
+                   textInput("contributor_name", "Contributor's Name:", "", placeholder = "e.g., Alice, Bob"),
+                   numericInput("contribution_amount", "Amount Contributed (Rs):", value = 0, min = 0, step = 0.01, width = '100%'),
                    actionButton("add_contribution", "Add Contribution", class = "btn-primary btn-block")
+                 ),
+                 wellPanel(
+                   h4("Admin Actions"),
+                   actionButton("clear_contributions_data", "Clear All Contributions", class = "btn-danger btn-block")
                  )
                ),
                mainPanel(
@@ -141,6 +157,13 @@ ui <- fluidPage(
                        tags$li(icon("mug-hot"), " Souradyuti - The Water Wizard"),
                        tags$li(icon("mug-hot"), " Runa - The Condiment Commander")
                ),
+               br(),
+               h4("Special Mention"),
+               p(icon("hands-helping"), strong("Santosh – The Brave Bean Bystander"), 
+                 " – Allergic to coffee, yet still offered to contribute. A true act of caffeinated solidarity. Your spirit brews among us, even if your cup stays empty!", 
+                 style = "margin-top: 10px;"),
+               p("We didn’t accept his contribution because it’s the heart that counts, and his was already full of beans ❤️.",
+                 style = "margin-top: -10px; margin-bottom: 20px;"),
                p("Thanks for bean-g amazing!", style = "text-align: center; font-style: italic; margin-top: 30px;")
              )
     ),
@@ -157,7 +180,11 @@ ui <- fluidPage(
                    textAreaInput("suggestion_text", "Your Suggestion:", "",
                                  placeholder = "e.g., 'Try out some Arabica beans from Ethiopia!' or 'A French Press would be great for larger batches.'",
                                  rows = 5),
-                   actionButton("add_suggestion", "Submit Suggestion", class = "btn-info btn-block")
+                   actionButton("add_suggestion", "Submit Suggestion", class = "btn-primary btn-block")
+                 ),
+                 wellPanel(
+                   h4("Admin Actions"),
+                   actionButton("clear_suggestions_data", "Clear All Suggestions", class = "btn-danger btn-block")
                  )
                ),
                mainPanel(
@@ -176,104 +203,104 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   # --- Google Sheets Setup ---
-  # Replace with your actual Google Sheet ID
-  # This sheet should have a tab named "CoffeeData" (or whatever you choose)
-  # and be shared with your service account's email address.
-  google_sheet_id <- "12cp5H-E0bZA0mK_If139Hrvc6wILBuCOJqBewjeGLys" # <--- REPLACE THIS WITH YOUR SHEET ID
+  google_sheet_id <- "12cp5H-E0bZA0mK_If139Hrvc6wILBuCOJqBewjeGLys"
+  json_file_path <- "infra-ratio-461719-b6-6f61f9a007c4.json" # Ensure this file is in your app's root directory ("/cloud/project/")
   
-  # Authentication for Google Sheets
-  # For Posit Connect, we recommend setting a GOOGLE_SERVICE_ACCOUNT_KEY environment variable
-  # with the full JSON key content.
-  if (Sys.getenv("GOOGLE_SERVICE_ACCOUNT_KEY") != "") {
-    # Write the JSON key content to a temporary file
+  # It's good practice to set the cache location for tokens, if any are created (e.g., during interactive fallback)
+  options(gargle_oauth_cache = ".secrets")
+  
+  # Explicitly de-authenticate any existing user session for googlesheets4
+  # This helps ensure the service account is used if available.
+  gs4_deauth()
+  
+  # Attempt to authenticate using the service account for Google Sheets
+  authenticated_as_sa <- FALSE
+  if (Sys.getenv("GOOGLE_SERVICE_ACCOUNT_KEY_JSON_CONTENT") != "") { # Using a more descriptive env var name
+    # If service account key JSON *content* is set as an environment variable
+    message("Attempting auth using GOOGLE_SERVICE_ACCOUNT_KEY_JSON_CONTENT environment variable.")
     temp_key_file <- tempfile(fileext = ".json")
-    writeLines(Sys.getenv("GOOGLE_SERVICE_ACCOUNT_KEY"), temp_key_file)
-    gs4_auth(path = temp_key_file, cache = FALSE)
+    writeLines(Sys.getenv("GOOGLE_SERVICE_ACCOUNT_KEY_JSON_CONTENT"), temp_key_file)
+    tryCatch({
+      gs4_auth(path = temp_key_file)
+      authenticated_as_sa <- TRUE
+      message("Successfully authenticated using service account from environment variable.")
+    }, error = function(e) {
+      message(paste("Error during gs4_auth with env var key:", e$message))
+    })
     # The tempfile will be automatically cleaned up when the R session ends.
-  } else {
-    # Fallback for local development if not using a service account file
-    # This will typically open a browser for interactive authentication.
-    # On first run, it will ask for consent and create a .secrets folder.
-    gs4_auth(cache = ".secrets", email = TRUE)
+  } else if (file.exists(json_file_path)) {
+    # Fallback for local development if you have a service account JSON file in the app directory
+    message(paste("Attempting gs4_auth with path:", json_file_path))
+    tryCatch({
+      gs4_auth(path = json_file_path)
+      authenticated_as_sa <- TRUE
+      message("Successfully authenticated using service account from local JSON file.")
+    }, error = function(e) {
+      message(paste("Error during gs4_auth with local JSON file:", e$message))
+    })
+  }
+  
+  if (!authenticated_as_sa) {
+    # If service account authentication failed or no SA key was found,
+    # gargle will likely attempt interactive auth when read_sheet is called.
+    # You could also explicitly call gs4_auth() here to trigger it earlier if desired.
+    message("Service account authentication not performed or failed. Will rely on default gargle behavior (may prompt for interactive auth).")
   }
   # --- End Google Sheets Setup ---
   
-  
-  # Reactive value to store all data. Initialize with all expected columns.
+  # Reactive value to store all data.
   expenses <- reactiveVal(data.frame(
-    Date = as.Date(character()),
-    Item = character(),
-    Category = character(),
-    Amount = numeric(),
-    Payer = character(),
-    Type = character(), # "Running", "Shared", "Contribution", "Suggestion"
-    SuggestionName = character(),
-    SuggestionText = character(),
-    stringsAsFactors = FALSE
+    # ... (your existing expenses reactiveVal definition)
   ))
   
-  # Define all expected columns for the consolidated dataframe
   expected_cols <- c("Date", "Item", "Category", "Amount", "Payer", "Type",
                      "SuggestionName", "SuggestionText")
   
   # Load existing data from Google Sheet when the app starts
-  observe({
-    # Use tryCatch for robust error handling in case sheet is not found or permissions are off
+  observeEvent(TRUE, {
+    showNotification("Attempting to load data from Google Sheet...", type = "message", duration = 5)
     tryCatch({
-      # Read the sheet. col_types is a hint, but googlesheets4 is often good at guessing.
-      # Specify the sheet name, e.g., "CoffeeData"
-      loaded_data <- read_sheet(google_sheet_id, sheet = "CoffeeData")
+      # Ensure authentication has been attempted before reading.
+      # The gs4_auth calls above should have set the state.
+      loaded_data <- read_sheet(google_sheet_id, sheet = "CoffeeData",
+                                col_types = "Dccdcccc", # Date, Char, Char, Double, Char, Char, Char, Char
+                                range = "A:H")
       
-      # Ensure Date column is proper date format (googlesheets4 usually handles this)
+      # ... (rest of your data loading and processing logic)
+      # ... (make sure this part is identical to your original working code,
+      #      including the handling for Type, Date, Amount conversions and column reordering)
+      
+      # Example of ensuring 'Type' column as in your original code:
+      if (!("Type" %in% colnames(loaded_data))) {
+        loaded_data$Type <- "Running" # Default if missing
+      } else {
+        loaded_data$Type[is.na(loaded_data$Type)] <- "Running" # Default NAs
+      }
       loaded_data$Date <- as.Date(loaded_data$Date)
-      
-      # Ensure Amount is numeric (googlesheets4 is usually good, but explicit conversion is safer)
       loaded_data$Amount <- as.numeric(loaded_data$Amount)
-      
-      # Add missing columns with appropriate default NA values if loaded_data doesn't match expected
       for (col in setdiff(expected_cols, colnames(loaded_data))) {
-        if (col == "Date") {
-          loaded_data[[col]] <- as.Date(NA)
-        } else if (col == "Amount") {
-          loaded_data[[col]] <- NA_real_
-        } else { # For character columns
-          loaded_data[[col]] <- NA_character_
-        }
+        if (col == "Date") { loaded_data[[col]] <- as.Date(NA_character_) }
+        else if (col == "Amount") { loaded_data[[col]] <- NA_real_ }
+        else { loaded_data[[col]] <- NA_character_ }
       }
-      
-      # For older files without 'Type', assume they were 'Running' costs initially
-      if ("Type" %in% colnames(loaded_data) && any(is.na(loaded_data$Type))) {
-        loaded_data$Type[is.na(loaded_data$Type)] <- "Running"
-      } else if (!("Type" %in% colnames(loaded_data))) {
-        loaded_data$Type <- "Running"
-      }
-      
-      # Ensure all rows have a non-NA Type (important if old data had NAs or blank cells)
-      loaded_data$Type[is.na(loaded_data$Type)] <- "Running" # Default to 'Running' for any remaining NA Types
-      
-      # Reorder columns to match the desired order
       loaded_data <- loaded_data[expected_cols]
       
+      
       expenses(loaded_data)
-      showNotification("Data loaded from Google Sheet.", type = "message", duration = 2)
+      showNotification("Data loaded from Google Sheet successfully!", type = "message", duration = 3)
       
     }, error = function(e) {
       warning("Could not load data from Google Sheet: ", e$message)
-      # If loading fails (e.g., first run, sheet empty, or permissions), initialize with empty df
-      expenses(data.frame(
-        Date = as.Date(character()),
-        Item = character(),
-        Category = character(),
-        Amount = numeric(),
-        Payer = character(),
-        Type = character(),
-        SuggestionName = character(),
-        SuggestionText = character(),
+      expenses(data.frame( # Initialize with empty df as before
+        Date = as.Date(character()), Item = character(), Category = character(),
+        Amount = numeric(), Payer = character(), Type = character(),
+        SuggestionName = character(), SuggestionText = character(),
         stringsAsFactors = FALSE
       ))
-      showNotification(paste("Error loading data from Google Sheet:", e$message,
-                             "\nApp initialized with empty data. Please check Sheet ID and permissions."),
-                       type = "error", duration = NULL) # duration = NULL makes it stay until dismissed
+      showNotification(
+        paste("Error loading data from Google Sheet. Please check Sheet ID, permissions, and authentication. Error:", e$message),
+        type = "error", duration = NULL
+      )
     })
   }, once = TRUE) # Run this observer only once on app startup
   
@@ -283,7 +310,7 @@ server <- function(input, output, session) {
     # This block is crucial for sheet_write to maintain column consistency
     for (col in setdiff(expected_cols, colnames(data))) {
       if (col == "Date") {
-        data[[col]] <- as.Date(NA)
+        data[[col]] <- as.Date(NA_character_)
       } else if (col == "Amount") {
         data[[col]] <- NA_real_
       } else { # For character columns
@@ -295,6 +322,7 @@ server <- function(input, output, session) {
     
     tryCatch({
       # Write to the specified sheet. sheet_write overwrites the entire tab.
+      # Ensure 'CoffeeData' sheet exists in your Google Sheet.
       sheet_write(data, ss = google_sheet_id, sheet = "CoffeeData")
       # No notification here, as calls to save_expenses are followed by specific action notifications
     }, error = function(e) {
@@ -309,10 +337,10 @@ server <- function(input, output, session) {
     
     new_expense <- data.frame(
       Date = input$running_date,
-      Item = input$running_item,
+      Item = trimws(input$running_item), # Remove leading/trailing whitespace
       Category = input$running_category,
       Amount = input$running_amount,
-      Payer = input$running_payer,
+      Payer = trimws(input$running_payer), # Remove leading/trailing whitespace
       Type = "Running",
       SuggestionName = NA_character_,
       SuggestionText = NA_character_,
@@ -322,19 +350,51 @@ server <- function(input, output, session) {
     updated_expenses <- rbind(current_expenses, new_expense)
     expenses(updated_expenses)
     save_expenses(updated_expenses) # Save to Google Sheet
-    showNotification("Running cost added successfully!", type = "message", duration = 3)
+    showNotification("Running cost added successfully!", type = "message", duration = 3) # Changed type
     updateTextInput(session, "running_item", value = "")
     updateNumericInput(session, "running_amount", value = 0)
     updateTextInput(session, "running_payer", value = "")
   })
   
+  # Clear all running costs
+  observeEvent(input$clear_running_data, {
+    showModal(modalDialog(
+      title = "Confirm Data Deletion",
+      "Are you sure you want to delete ALL Running Cost data? This action cannot be undone.",
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_clear_running", "Delete All Running Costs", class = "btn-danger")
+      )
+    ))
+  })
+  
+  observeEvent(input$confirm_clear_running, {
+    removeModal()
+    current_expenses <- expenses()
+    # Keep all data that is NOT of Type "Running"
+    updated_expenses <- filter(current_expenses, Type != "Running")
+    expenses(updated_expenses)
+    save_expenses(updated_expenses)
+    showNotification("All running cost data cleared!", type = "warning", duration = 3)
+  })
+  
   output$running_table <- renderDT({
+    # Ensure 'Type' column exists before filtering
     if ("Type" %in% colnames(expenses()) && nrow(expenses()) > 0) {
-      datatable(filter(expenses(), Type == "Running") %>% select(Date, Item, Category, Amount, Payer),
+      display_data <- filter(expenses(), Type == "Running") %>% select(Date, Item, Category, Amount, Payer)
+      if (nrow(display_data) == 0) {
+        # Return empty DT with correct column names if no running data
+        return(datatable(data.frame(Date=as.Date(character()), Item=character(), Category=character(),
+                                    Amount=numeric(), Payer=character()),
+                         options = list(pageLength = 10, autoWidth = TRUE),
+                         rownames = FALSE, selection = 'none'))
+      }
+      datatable(display_data,
                 options = list(pageLength = 10, autoWidth = TRUE,
-                               columnDefs = list(list(width = '10%', targets = c(0, 3)))),
+                               columnDefs = list(list(width = '10%', targets = c(0, 3)))), # Adjust column widths if needed
                 rownames = FALSE, selection = 'none')
     } else {
+      # Initial empty table if expenses() is completely empty or Type column is missing
       datatable(data.frame(Date=as.Date(character()), Item=character(), Category=character(),
                            Amount=numeric(), Payer=character()),
                 options = list(pageLength = 10, autoWidth = TRUE),
@@ -344,7 +404,7 @@ server <- function(input, output, session) {
   
   output$running_total <- renderText({
     if ("Type" %in% colnames(expenses())) {
-      total <- sum(filter(expenses(), Type == "Running")$Amount)
+      total <- sum(filter(expenses(), Type == "Running")$Amount, na.rm = TRUE) # Add na.rm
       paste("Total Running Costs:", format(total, big.mark = ",", scientific = FALSE), "Rs")
     } else {
       "Total Running Costs: N/A"
@@ -353,11 +413,13 @@ server <- function(input, output, session) {
   
   output$running_remaining <- renderText({
     if ("Type" %in% colnames(expenses())) {
-      total_running_expenses <- sum(filter(expenses(), Type == "Running")$Amount)
-      total_contributions <- sum(filter(expenses(), Type == "Contribution")$Amount)
+      total_running_expenses <- sum(filter(expenses(), Type == "Running")$Amount, na.rm = TRUE)
+      total_contributions <- sum(filter(expenses(), Type == "Contribution")$Amount, na.rm = TRUE)
       
       remaining <- total_contributions - total_running_expenses
-      paste("Remaining Budget:", format(remaining, big.mark = ",", scientific = FALSE), "Rs")
+      color_style <- ifelse(remaining < 0, "color: #d9534f;", "color: #5cb85c;") # Red if negative, green if positive
+      
+      paste("Remaining Budget: ",format(remaining, big.mark = ",", scientific = FALSE), "Rs")
     } else {
       "Remaining Budget: N/A (Add contributions to see budget)"
     }
@@ -366,13 +428,15 @@ server <- function(input, output, session) {
   output$running_category_plot <- renderPlot({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Running")) > 0) {
       running_data <- filter(expenses(), Type == "Running")
-      category_summary <- aggregate(Amount ~ Category, data = running_data, sum)
+      category_summary <- aggregate(Amount ~ Category, data = running_data, sum, na.action = na.omit)
       ggplot(category_summary, aes(x = "", y = Amount, fill = Category)) +
         geom_bar(width = 1, stat = "identity") +
         coord_polar("y", start = 0) +
         theme_void() +
         labs(title = "Running Costs by Category") +
-        theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16)) +
+        theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+              legend.title = element_text(size = 12, face = "bold"),
+              legend.text = element_text(size = 11)) +
         guides(fill = guide_legend(title = "Category"))
     } else {
       ggplot() +
@@ -384,16 +448,16 @@ server <- function(input, output, session) {
   output$running_payer_plot <- renderPlot({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Running")) > 0) {
       running_data <- filter(expenses(), Type == "Running")
-      payer_summary <- aggregate(Amount ~ Payer, data = running_data, sum)
+      payer_summary <- aggregate(Amount ~ Payer, data = running_data, sum, na.action = na.omit)
       ggplot(payer_summary, aes(x = reorder(Payer, -Amount), y = Amount, fill = Payer)) +
-        geom_bar(stat = "identity", fill = "#5cb85c") +
+        geom_bar(stat = "identity", fill = "#5cb85c") + # Fixed color for bars
         labs(title = "Running Costs by Payer", x = "Payer", y = "Amount (Rs)") +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
               axis.text.y = element_text(size = 12),
               axis.title = element_text(size = 14, face = "bold"),
               plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
-              legend.position = "none")
+              legend.position = "none") # Hide legend as fill is Payer
     } else {
       ggplot() +
         annotate("text", x = 0, y = 0, label = "No running cost data to show for payers yet.", size = 5, color = "grey50") +
@@ -408,10 +472,10 @@ server <- function(input, output, session) {
     
     new_expense <- data.frame(
       Date = input$shared_date,
-      Item = input$shared_description,
-      Category = "Shared Expense",
+      Item = trimws(input$shared_description),
+      Category = "Shared Expense", # Fixed category for shared expenses
       Amount = input$shared_amount,
-      Payer = input$shared_payer,
+      Payer = trimws(input$shared_payer),
       Type = "Shared",
       SuggestionName = NA_character_,
       SuggestionText = NA_character_,
@@ -421,16 +485,44 @@ server <- function(input, output, session) {
     updated_expenses <- rbind(current_expenses, new_expense)
     expenses(updated_expenses)
     save_expenses(updated_expenses) # Save to Google Sheet
-    showNotification("Shared expense added successfully!", type = "message", duration = 3)
+    showNotification("Shared expense added successfully!", type = "message", duration = 3) # Changed type
     updateTextInput(session, "shared_description", value = "")
     updateNumericInput(session, "shared_amount", value = 0)
     updateNumericInput(session, "shared_people", value = 2)
     updateTextInput(session, "shared_payer", value = "")
   })
   
+  # Clear all shared expenses
+  observeEvent(input$clear_shared_data, {
+    showModal(modalDialog(
+      title = "Confirm Data Deletion",
+      "Are you sure you want to delete ALL Shared Expense data? This action cannot be undone.",
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_clear_shared", "Delete All Shared Expenses", class = "btn-danger")
+      )
+    ))
+  })
+  
+  observeEvent(input$confirm_clear_shared, {
+    removeModal()
+    current_expenses <- expenses()
+    updated_expenses <- filter(current_expenses, Type != "Shared")
+    expenses(updated_expenses)
+    save_expenses(updated_expenses)
+    showNotification("All shared expense data cleared!", type = "warning", duration = 3)
+  })
+  
   output$shared_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(expenses()) > 0) {
-      datatable(filter(expenses(), Type == "Shared") %>% select(Date, Item, Amount, Payer),
+      display_data <- filter(expenses(), Type == "Shared") %>% select(Date, Item, Amount, Payer)
+      if (nrow(display_data) == 0) {
+        return(datatable(data.frame(Date=as.Date(character()), Item=character(),
+                                    Amount=numeric(), Payer=character()),
+                         options = list(pageLength = 10, autoWidth = TRUE),
+                         rownames = FALSE, selection = 'none'))
+      }
+      datatable(display_data,
                 options = list(pageLength = 10, autoWidth = TRUE),
                 rownames = FALSE, selection = 'none')
     } else {
@@ -443,9 +535,19 @@ server <- function(input, output, session) {
   output$shared_each <- renderText({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Shared")) > 0) {
       shared_data <- filter(expenses(), Type == "Shared")
-      last_expense <- tail(shared_data, 1)
-      each_owes <- last_expense$Amount / input$shared_people
-      paste("Based on the LAST entry:", format(each_owes, big.mark = ",", scientific = FALSE), "Rs per person")
+      if (nrow(shared_data) > 0) {
+        last_expense <- tail(shared_data, 1)
+        # Ensure input$shared_people is numeric and not zero
+        num_people <- as.numeric(input$shared_people)
+        if (!is.na(num_people) && num_people > 0) {
+          each_owes <- last_expense$Amount / num_people
+          paste("Based on the LAST entry:", format(each_owes, big.mark = ",", scientific = FALSE), "Rs per person")
+        } else {
+          "Number of people sharing must be a positive number."
+        }
+      } else {
+        "No shared expenses added yet. Enter details above to calculate."
+      }
     } else {
       "No shared expenses added yet. Enter details above to calculate."
     }
@@ -453,8 +555,7 @@ server <- function(input, output, session) {
   
   output$shared_plot <- renderPlot({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Shared")) > 0) {
-      shared_data <- filter(expenses(), Type == "Shared")
-      shared_data <- shared_data[order(shared_data$Date), ]
+      shared_data <- filter(expenses(), Type == "Shared") %>% arrange(Date) # Ensure data is ordered by date
       ggplot(shared_data, aes(x = Date, y = Amount, fill = Payer)) +
         geom_bar(stat = "identity", position = "stack") +
         labs(title = "Shared Expenses Over Time", x = "Date", y = "Amount (Rs)") +
@@ -481,7 +582,7 @@ server <- function(input, output, session) {
       Item = "Recurring Contribution",
       Category = "Fund",
       Amount = input$contribution_amount,
-      Payer = input$contributor_name,
+      Payer = trimws(input$contributor_name),
       Type = "Contribution",
       SuggestionName = NA_character_,
       SuggestionText = NA_character_,
@@ -491,15 +592,37 @@ server <- function(input, output, session) {
     updated_expenses <- rbind(current_expenses, new_contribution)
     expenses(updated_expenses)
     save_expenses(updated_expenses) # Save to Google Sheet
-    showNotification("Contribution added successfully!", type = "message", duration = 3)
+    showNotification("Contribution added successfully!", type = "message", duration = 3) # Changed type
     updateTextInput(session, "contributor_name", value = "")
     updateNumericInput(session, "contribution_amount", value = 0)
+  })
+  
+  # Clear all contributions
+  observeEvent(input$clear_contributions_data, {
+    showModal(modalDialog(
+      title = "Confirm Data Deletion",
+      "Are you sure you want to delete ALL Contribution data? This action cannot be undone.",
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_clear_contributions", "Delete All Contributions", class = "btn-danger")
+      )
+    ))
+  })
+  
+  observeEvent(input$confirm_clear_contributions, {
+    removeModal()
+    current_expenses <- expenses()
+    updated_expenses <- filter(current_expenses, Type != "Contribution")
+    expenses(updated_expenses)
+    save_expenses(updated_expenses)
+    showNotification("All contribution data cleared!", type = "warning", duration = 3)
   })
   
   output$contributions_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Contribution")) > 0) {
       datatable(filter(expenses(), Type == "Contribution") %>%
-                  select(Date, Payer, Amount),
+                  select(Date, Payer, Amount) %>%
+                  arrange(desc(Date)), # Sort by date descending
                 options = list(pageLength = 10, autoWidth = TRUE),
                 colnames = c("Date", "Contributor", "Amount (Rs)"),
                 rownames = FALSE, selection = 'none')
@@ -516,30 +639,51 @@ server <- function(input, output, session) {
     
     new_suggestion <- data.frame(
       Date = Sys.Date(),
-      Item = NA_character_,
+      Item = NA_character_, # Not applicable for suggestions
       Category = input$suggestion_category,
-      Amount = NA_real_,
-      Payer = NA_character_,
+      Amount = NA_real_, # Not applicable for suggestions
+      Payer = NA_character_, # Not applicable for suggestions
       Type = "Suggestion",
-      SuggestionName = ifelse(input$suggestion_name == "", "Anonymous", input$suggestion_name),
-      SuggestionText = input$suggestion_text,
+      SuggestionName = ifelse(trimws(input$suggestion_name) == "", "Anonymous", trimws(input$suggestion_name)),
+      SuggestionText = trimws(input$suggestion_text),
       stringsAsFactors = FALSE
     )
     current_expenses <- expenses()
     updated_expenses <- rbind(current_expenses, new_suggestion)
     expenses(updated_expenses)
     save_expenses(updated_expenses) # Save to Google Sheet
-    showNotification("Suggestion submitted! Thank you!", type = "message", duration = 3)
+    showNotification("Suggestion submitted! Thank you!", type = "message", duration = 3) # Changed type
     updateTextInput(session, "suggestion_name", value = "")
     updateTextAreaInput(session, "suggestion_text", value = "")
     updateSelectInput(session, "suggestion_category", selected = "Coffee Beans")
+  })
+  
+  # Clear all suggestions
+  observeEvent(input$clear_suggestions_data, {
+    showModal(modalDialog(
+      title = "Confirm Data Deletion",
+      "Are you sure you want to delete ALL Suggestions data? This action cannot be undone.",
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_clear_suggestions", "Delete All Suggestions", class = "btn-danger")
+      )
+    ))
+  })
+  
+  observeEvent(input$confirm_clear_suggestions, {
+    removeModal()
+    current_expenses <- expenses()
+    updated_expenses <- filter(current_expenses, Type != "Suggestion")
+    expenses(updated_expenses)
+    save_expenses(updated_expenses)
+    showNotification("All suggestion data cleared!", type = "warning", duration = 3)
   })
   
   output$suggestions_table <- renderDT({
     if ("Type" %in% colnames(expenses()) && nrow(filter(expenses(), Type == "Suggestion")) > 0) {
       datatable(filter(expenses(), Type == "Suggestion") %>%
                   select(Date, SuggestionName, Category, SuggestionText) %>%
-                  arrange(desc(Date)),
+                  arrange(desc(Date)), # Sort by date descending
                 options = list(pageLength = 10, autoWidth = TRUE,
                                columnDefs = list(list(width = '15%', targets = c(0, 1, 2)))),
                 colnames = c("Date", "Suggested By", "Category", "Suggestion"),
