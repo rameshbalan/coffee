@@ -155,6 +155,8 @@ ui <- fluidPage(
                        tags$li(icon("mug-hot"), " Sarat - The Cup Keeper"),
                        tags$li(icon("mug-hot"), " Manish - The Stir Stick Sorcerer"),
                        tags$li(icon("mug-hot"), " Souradyuti - The Water Wizard"),
+                       tags$li(icon("mug-hot"), " Priyadarshini - The Aroma Architect"),
+                       tags$li(icon("mug-hot"), " Arun - The Perfect Pourer"),
                        tags$li(icon("mug-hot"), " Runa - The Condiment Commander")
                ),
                br(),
